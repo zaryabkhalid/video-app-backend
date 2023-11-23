@@ -15,9 +15,9 @@ const registerUser = expressAsyncHandler(async (req, res, next) => {
   //* check user creation
   //* return res
 
-  const { username, email, fullname, password } = req.body;
+  const { username, email, fullName, password } = req.body;
   if (
-    [username, email, fullname, password].some((field) => field?.trim() === "")
+    [username, email, fullName, password].some((field) => field?.trim() === "")
   ) {
     throw new ApiError(400, "All fields are required");
   }
@@ -30,8 +30,26 @@ const registerUser = expressAsyncHandler(async (req, res, next) => {
   }
 
   // Getting files path from our local public folder
-  const avatarLocalPath = req.files?.avatar[0]?.path;
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  let avatarLocalPath;
+  let coverImageLocalPath;
+
+  // checking for avatar image
+  if (
+    req.files &&
+    Array.isArray(req.files.avatar) &&
+    req.files.avatar.length > 0
+  ) {
+    avatarLocalPath = req.files.avatar[0].path;
+  }
+
+  // checking for coverImage
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = req.files.coverImage[0].path;
+  }
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar is required");
@@ -48,7 +66,7 @@ const registerUser = expressAsyncHandler(async (req, res, next) => {
     username: username.toLowerCase(),
     avatar: avatar.url,
     coverImage: coverImage?.url || "",
-    fullname,
+    fullName,
     email,
     password,
   });
