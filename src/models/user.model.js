@@ -6,7 +6,7 @@ import {
   APP_ACCESS_TOKEN_SECRET,
   APP_REFRESH_TOKEN_EXP,
   APP_REFRESH_TOKEN_SECRET,
-} from "../config";
+} from "../config/index.js";
 
 const userSchema = new Schema(
   {
