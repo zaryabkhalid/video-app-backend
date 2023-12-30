@@ -2,6 +2,8 @@ import { Router } from "express";
 import {
   changeCurrentPassword,
   getCurrentUser,
+  getUserChannelProfile,
+  getWatchHistory,
   loginUser,
   logoutUser,
   refreshAccessToken,
@@ -16,8 +18,8 @@ import { verifyJwt } from "../middlewares/auth.middleware.js";
 const router = Router();
 
 /**
- * * POST
- * * @route /register
+ * @method POST
+ * @route /register
  */
 
 router.route("/register").post(
@@ -29,63 +31,77 @@ router.route("/register").post(
 );
 
 /**
- * * POST
- * * @route /login
+ * @method POST
+ * @route /login
  */
 
 router.route("/login").post(loginUser);
 
 // !Secure Routes
 /**
- * * POST
- * * @route /logout
+ * @method POST
+ * @route /logout
  */
 router.route("/logout").post(verifyJwt, logoutUser);
 
 /**
- * * POST
- * * @route /refresh-token
+ * @method POST
+ * @route /refresh-token
  */
 
 router.route("/refresh-token").post(refreshAccessToken);
 
 /**
- * * POST
- * * @route /change-password
+ * @method POST
+ * @route /change-password
  */
 
 router.route("/change-password").post(verifyJwt, changeCurrentPassword);
 
 /**
- * * GET
- * * @route /get-current-user
+ * @method GET
+ * @route /get-current-user
  */
 
 router.route("/current-user").get(verifyJwt, getCurrentUser);
 
 /**
- * * PATCH
- * * @route /update-user-details
+ * @method PATCH
+ * @route /update-user-details
  */
 
 router.route("/update-user-details").patch(verifyJwt, updateUserDetails);
 
 /**
- * * PATCH
- * * @route /update-user-avatar
+ * @method PATCH
+ * @route /update-user-avatar
  */
 
 router
   .route("/update-user-avatar")
-  .patch(upload.single("avatar"), verifyJwt, updateUserAvatar);
+  .patch(verifyJwt, upload.single("avatar"), updateUserAvatar);
 
 /**
- * * PATCH
- * * @route /update-user-coverImage
+ * @method PATCH
+ * @route /update-user-coverImage
  */
 
 router
   .route("/update-user-coverImage")
-  .patch(upload.single("coverImage"), verifyJwt, updateUserCoverImage);
+  .patch(verifyJwt, upload.single("coverImage"), updateUserCoverImage);
+
+/**
+ * @method GET
+ * @route /user-channel-profile
+ */
+
+router.route("/c/:username").get(verifyJwt, getUserChannelProfile);
+
+/**
+ * @method GET
+ * @route /user-watchHistory
+ */
+
+router.route("/history").get(verifyJwt, getWatchHistory);
 
 export default router;
