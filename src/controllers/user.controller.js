@@ -115,7 +115,7 @@ const loginUser = expressAsyncHandler(async (req, res) => {
   );
 
   const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken"
+    "-password -refreshTokens"
   );
 
   // cookies Options
@@ -153,9 +153,7 @@ const logoutUser = expressAsyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     user_id,
     {
-      $set: {
-        refreshToken: undefined,
-      },
+      $unset: { refreshTokens: 1 },
     },
     {
       new: true,
@@ -192,14 +190,13 @@ const refreshAccessToken = expressAsyncHandler(async (req, res) => {
   }
 
   // verify RefreshToken
-
   try {
     const decodedRefreshToken = await jwt.verify(
       incomingRefreshToken,
       APP_REFRESH_TOKEN_SECRET
     );
     if (!decodedRefreshToken) {
-      throw new ApiError(401, "Bad Request");
+      throw new ApiError(401, "Unauthorized Access.");
     }
 
     const matchedUser = await User.findById(decodedRefreshToken._id);
@@ -219,17 +216,18 @@ const refreshAccessToken = expressAsyncHandler(async (req, res) => {
       secure: true,
     };
 
-    const { accessToken, newRefreshToken } =
-      await generateAccessAndRefreshTokens(matchedUser._id);
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+      matchedUser._id
+    );
 
     return res
       .status(200)
       .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", newRefreshToken, options)
+      .cookie("refreshToken", refreshToken, options)
       .json(
         new ApiResponse(
           200,
-          { accessToken, refreshToken: newRefreshToken },
+          { accessToken, refreshToken: refreshToken },
           "Tokens Refreshed Successfully"
         )
       );

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-  changeCurrentPassword,
+  changeCurrentUserPassword,
   getCurrentUser,
   getUserChannelProfile,
   getWatchHistory,
@@ -56,7 +56,7 @@ router.route("/refresh-token").post(refreshAccessToken);
  * @route /change-password
  */
 
-router.route("/change-password").post(verifyJwt, changeCurrentPassword);
+router.route("/change-password").post(verifyJwt, changeCurrentUserPassword);
 
 /**
  * @method GET

@@ -9,7 +9,7 @@ export const generateAccessAndRefreshTokens = async (userId) => {
 
     const refreshToken = await user.generateRefreshToken();
 
-    user.refreshToken = refreshToken;
+    user.refreshTokens = refreshToken;
     await user.save({ validateBeforeSave: false });
 
     return { accessToken, refreshToken };
