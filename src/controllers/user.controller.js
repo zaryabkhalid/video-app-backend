@@ -15,9 +15,7 @@ import mongoose from "mongoose";
  * */
 const registerUser = expressAsyncHandler(async (req, res) => {
   const { username, email, fullName, password } = req.body;
-  if (
-    [username, email, fullName, password].some((field) => field?.trim() === "")
-  ) {
+  if ([username, email, fullName, password].some((field) => field?.trim() === "")) {
     throw new ApiError(400, "All fields are required");
   }
 
@@ -32,20 +30,12 @@ const registerUser = expressAsyncHandler(async (req, res) => {
   let coverImageLocalPath;
 
   // checking for avatar image
-  if (
-    req.files &&
-    Array.isArray(req.files.avatar) &&
-    req.files.avatar.length > 0
-  ) {
+  if (req.files && Array.isArray(req.files.avatar) && req.files.avatar.length > 0) {
     avatarLocalPath = req.files.avatar[0].path;
   }
 
   // checking for coverImage
-  if (
-    req.files &&
-    Array.isArray(req.files.coverImage) &&
-    req.files.coverImage.length > 0
-  ) {
+  if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
     coverImageLocalPath = req.files.coverImage[0].path;
   }
 
@@ -69,17 +59,13 @@ const registerUser = expressAsyncHandler(async (req, res) => {
     password,
   });
 
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshTokens"
-  );
+  const createdUser = await User.findById(user._id).select("-password -refreshTokens");
 
   if (!createdUser) {
     throw new ApiError(500, "Something went wrong while registering a User");
   }
 
-  return res
-    .status(201)
-    .json(new ApiResponse(200, createdUser, "User Registered Successfully"));
+  return res.status(201).json(new ApiResponse(200, createdUser, "User Registered Successfully"));
 });
 
 /**
@@ -110,13 +96,9 @@ const loginUser = expressAsyncHandler(async (req, res) => {
     throw new ApiError(401, "Invalid user cradentials");
   }
 
-  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
-    user._id
-  );
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
 
-  const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshTokens"
-  );
+  const loggedInUser = await User.findById(user._id).select("-password -refreshTokens");
 
   // cookies Options
   const options = {
@@ -182,8 +164,7 @@ const logoutUser = expressAsyncHandler(async (req, res) => {
 const refreshAccessToken = expressAsyncHandler(async (req, res) => {
   // Get refresh token from cookies
 
-  const incomingRefreshToken =
-    req.cookies.refreshToken || req.body.refreshToken;
+  const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
   if (!incomingRefreshToken) {
     throw new ApiError(401, "Unauthorized Request");
@@ -191,10 +172,7 @@ const refreshAccessToken = expressAsyncHandler(async (req, res) => {
 
   // verify RefreshToken
   try {
-    const decodedRefreshToken = await jwt.verify(
-      incomingRefreshToken,
-      APP_REFRESH_TOKEN_SECRET
-    );
+    const decodedRefreshToken = await jwt.verify(incomingRefreshToken, APP_REFRESH_TOKEN_SECRET);
     if (!decodedRefreshToken) {
       throw new ApiError(401, "Unauthorized Access.");
     }
@@ -216,21 +194,13 @@ const refreshAccessToken = expressAsyncHandler(async (req, res) => {
       secure: true,
     };
 
-    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
-      matchedUser._id
-    );
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(matchedUser._id);
 
     return res
       .status(200)
       .cookie("accessToken", accessToken, options)
       .cookie("refreshToken", refreshToken, options)
-      .json(
-        new ApiResponse(
-          200,
-          { accessToken, refreshToken: refreshToken },
-          "Tokens Refreshed Successfully"
-        )
-      );
+      .json(new ApiResponse(200, { accessToken, refreshToken: refreshToken }, "Tokens Refreshed Successfully"));
   } catch (error) {
     throw new ApiError(401, error?.message || "Invalid Refresh Token");
   }
@@ -256,9 +226,7 @@ const changeCurrentUserPassword = expressAsyncHandler(async (req, res) => {
 
   await user.save({ validateBeforeSave: false });
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Password Changed Successfully"));
+  return res.status(200).json(new ApiResponse(200, {}, "Password Changed Successfully"));
 });
 
 /**
@@ -268,9 +236,7 @@ const changeCurrentUserPassword = expressAsyncHandler(async (req, res) => {
  * */
 
 const getCurrentUser = expressAsyncHandler(async (req, res) => {
-  return res
-    .status(200)
-    .json(new ApiResponse(200, req.user, "Current User Fetched Successfully"));
+  return res.status(200).json(new ApiResponse(200, req.user, "Current User Fetched Successfully"));
 });
 
 /**
@@ -297,9 +263,7 @@ const updateUserDetails = expressAsyncHandler(async (req, res) => {
     { new: true }
   ).select("-password -refreshTokens");
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "User Details Updated Successfully"));
+  return res.status(200).json(new ApiResponse(200, user, "User Details Updated Successfully"));
 });
 
 /**
@@ -330,9 +294,7 @@ const updateUserAvatar = expressAsyncHandler(async (req, res) => {
     { new: true }
   ).select("-password -refreshTokens");
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "User Avatar Updated Successfully"));
+  return res.status(200).json(new ApiResponse(200, user, "User Avatar Updated Successfully"));
 });
 
 /**
@@ -364,9 +326,7 @@ const updateUserCoverImage = expressAsyncHandler(async (req, res) => {
       new: true,
     }
   ).select("-password -refreshTokens");
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "User Cover Image Updated Successfully"));
+  return res.status(200).json(new ApiResponse(200, user, "User Cover Image Updated Successfully"));
 });
 
 /**
@@ -438,11 +398,7 @@ const getUserChannelProfile = expressAsyncHandler(async (req, res) => {
     throw new ApiError(404, "Channel Not Found");
   }
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, channel[0], "Channel Profile Fetched Successfully")
-    );
+  return res.status(200).json(new ApiResponse(200, channel[0], "Channel Profile Fetched Successfully"));
 });
 
 const getWatchHistory = expressAsyncHandler(async (req, res) => {
@@ -489,15 +445,7 @@ const getWatchHistory = expressAsyncHandler(async (req, res) => {
     },
   ]);
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        user[0].watchHistory,
-        "Watch History Fetched Successfully"
-      )
-    );
+  return res.status(200).json(new ApiResponse(200, user[0].watchHistory, "Watch History Fetched Successfully"));
 });
 
 export {

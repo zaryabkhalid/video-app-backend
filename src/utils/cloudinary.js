@@ -1,10 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
-import {
-  APP_CLOUDINARY_API_KEY,
-  APP_CLOUDINARY_NAME,
-  APP_CLOUDINARY_SECRET_KEY,
-} from "../config/index.js";
+import { APP_CLOUDINARY_API_KEY, APP_CLOUDINARY_NAME, APP_CLOUDINARY_SECRET_KEY } from "../config/index.js";
 
 cloudinary.config({
   cloud_name: APP_CLOUDINARY_NAME,

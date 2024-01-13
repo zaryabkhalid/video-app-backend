@@ -77,18 +77,14 @@ router.route("/update-user-details").patch(verifyJwt, updateUserDetails);
  * @route /update-user-avatar
  */
 
-router
-  .route("/update-user-avatar")
-  .patch(verifyJwt, upload.single("avatar"), updateUserAvatar);
+router.route("/update-user-avatar").patch(verifyJwt, upload.single("avatar"), updateUserAvatar);
 
 /**
  * @method PATCH
  * @route /update-user-coverImage
  */
 
-router
-  .route("/update-user-coverImage")
-  .patch(verifyJwt, upload.single("coverImage"), updateUserCoverImage);
+router.route("/update-user-coverImage").patch(verifyJwt, upload.single("coverImage"), updateUserCoverImage);
 
 /**
  * @method GET

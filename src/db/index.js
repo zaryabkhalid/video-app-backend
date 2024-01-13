@@ -4,9 +4,7 @@ import { APP_MONGODB_URI } from "../config/index.js";
 
 const connectDB = async () => {
   try {
-    const connectionInstance = await mongoose.connect(
-      `${APP_MONGODB_URI}/${DB_NAME}`
-    );
+    const connectionInstance = await mongoose.connect(`${APP_MONGODB_URI}/${DB_NAME}`);
     console.log(`\n DATABASE HOST: ${connectionInstance.connection.host}`);
   } catch (error) {
     console.log("MONGODB connection Error", error);
