@@ -38,7 +38,7 @@ const updateVideo = expressAsyncHandler(async (req, res) => {
  * @method deleteVideo
  */
 
-const deleteVideo = asyncHandler(async (req, res) => {
+const deleteVideo = expressAsyncHandler(async (req, res) => {
   const { videoId } = req.params;
   //TODO: delete video from the database
 });
@@ -46,7 +46,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
 /**
  * @method togglePublishVideoStatus
  */
-const togglePublishStatus = asyncHandler(async (req, res) => {
+const togglePublishStatus = expressAsyncHandler(async (req, res) => {
   // TODO: Make video publish or draft
   const { videoId } = req.params;
 });
