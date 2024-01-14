@@ -48,9 +48,9 @@ const publishAVideo = expressAsyncHandler(async (req, res) => {
   }
 
   const videoFile = await uploadOnCloudinary(videoFileLocalPath);
-  console.log("VideoFile: ", videoFile);
+  // console.log("VideoFile: ", videoFile);
   const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
-  console.log("Thumbnail: ", thumbnail);
+  // console.log("Thumbnail: ", thumbnail);
 
   const savedVideo = await Video.create({
     title,
