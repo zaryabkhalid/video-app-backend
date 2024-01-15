@@ -75,7 +75,7 @@ const publishAVideo = expressAsyncHandler(async (req, res) => {
  */
 const getVideoById = expressAsyncHandler(async (req, res) => {
   // TODO: get video by using video ID
-  const { videoId } = req.params;
+  const videoId = req.params.videoId;
 
   if (!videoId) {
     throw new ApiError(400, "Video Id is missing");
@@ -104,8 +104,21 @@ const updateVideo = expressAsyncHandler(async (req, res) => {
  */
 
 const deleteVideo = expressAsyncHandler(async (req, res) => {
-  const { videoId } = req.params;
   //TODO: delete video from the database
+
+  const videoId = req.params.videoId;
+
+  if (!videoId) {
+    throw new ApiError(400, "Video Id is missing");
+  }
+
+  const videoToBeDeleted = await Video.findByIdAndDelete(videoId);
+
+  if (!videoToBeDeleted) {
+    throw new ApiError(404, "Video does'nt exist");
+  }
+
+  return res.status(200).json(new ApiResponse(200, {}, "Video Deleted Succssfully..."));
 });
 
 /**
