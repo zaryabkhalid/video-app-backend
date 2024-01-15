@@ -75,6 +75,21 @@ const publishAVideo = expressAsyncHandler(async (req, res) => {
  */
 const getVideoById = expressAsyncHandler(async (req, res) => {
   // TODO: get video by using video ID
+  const { videoId } = req.params;
+
+  if (!videoId) {
+    throw new ApiError(400, "Video Id is missing");
+  }
+
+  const filteredVideo = await Video.findById(videoId).populate({
+    path: "owner",
+    select: "_id fullName avatar coverImage watchHistory",
+  });
+  if (!filteredVideo) {
+    throw new ApiError(404, "Video Not Found");
+  }
+
+  return res.status(200).json(new ApiResponse(200, filteredVideo, "Success..."));
 });
 
 /**
