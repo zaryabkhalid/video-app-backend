@@ -127,6 +127,22 @@ const deleteVideo = expressAsyncHandler(async (req, res) => {
 const togglePublishStatus = expressAsyncHandler(async (req, res) => {
   // TODO: Make video publish or draft
   const { videoId } = req.params;
+
+  if (!videoId) {
+    throw new ApiError(400, "Video Id is missing...");
+  }
+
+  const updatedStatusVideo = await Video.findById(videoId);
+
+  if (!updatedStatusVideo) {
+    throw new ApiError(404, "Video not found...");
+  }
+
+  updatedStatusVideo.isPublished = !updatedStatusVideo.isPublished;
+
+  updatedStatusVideo.save({ validateBeforeSave: false });
+
+  return res.status(200).json(new ApiResponse(200, updatedStatusVideo, "Status updated Successfully..."));
 });
 
 export { getAllVideos, getVideoById, publishAVideo, updateVideo, deleteVideo, togglePublishStatus };
