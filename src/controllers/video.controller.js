@@ -13,9 +13,7 @@ const getAllVideos = expressAsyncHandler(async (req, res) => {
   // TODO: get all videos from db using queries like pagination, sort and limit=10;
 });
 
-/**
- * @method PulishVideo
- */
+//@method PulishVideo
 const publishAVideo = expressAsyncHandler(async (req, res) => {
   // TODO: Get upload video on a cloudinary and save its link on db.
 
@@ -48,9 +46,8 @@ const publishAVideo = expressAsyncHandler(async (req, res) => {
   }
 
   const videoFile = await uploadOnCloudinary(videoFileLocalPath);
-  // console.log("VideoFile: ", videoFile);
+
   const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
-  // console.log("Thumbnail: ", thumbnail);
 
   const savedVideo = await Video.create({
     title,
@@ -68,11 +65,7 @@ const publishAVideo = expressAsyncHandler(async (req, res) => {
   return res.status(201).json(new ApiResponse(200, savedVideo, "Video Uploaded Successfully..."));
 });
 
-/**
- * ----------------------
- * @method GetVideoById
- * ----------------------
- */
+//@method GetVideoById
 const getVideoById = expressAsyncHandler(async (req, res) => {
   // TODO: get video by using video ID
   const videoId = req.params.videoId;
@@ -92,17 +85,45 @@ const getVideoById = expressAsyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, filteredVideo, "Success..."));
 });
 
-/**
- * @method UpdateVideo
- */
+// @method UpdateVideo
 const updateVideo = expressAsyncHandler(async (req, res) => {
-  // TODO: Update video details like title, description, thumbnail
+  const { videoId } = req.params;
+  const { title, description } = req.body;
+  const thumbnailLocalPath = req.file?.path;
+
+  if (!thumbnailLocalPath) {
+    throw new ApiError(400, "Thumbnail is Required");
+  }
+
+  if (!title || !description) {
+    throw new ApiError(400, "Title & Description is required.");
+  }
+
+  const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+  if (!thumbnail?.url) {
+    throw new ApiError(400, "Error While uploading a thumnail...");
+  }
+
+  const filteredVideo = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      $set: {
+        title: title,
+        description: description,
+        thumbnail: thumbnail.url,
+      },
+    },
+    { new: true }
+  ).select("title description thumbnail");
+
+  if (!filteredVideo) {
+    throw new ApiError(404, "Video Not found...");
+  }
+
+  return res.status(200).json(new ApiResponse(200, filteredVideo, "Video updated Successfully..."));
 });
 
-/**
- * @method deleteVideo
- */
-
+//  @method deleteVideo
 const deleteVideo = expressAsyncHandler(async (req, res) => {
   //TODO: delete video from the database
 
@@ -121,11 +142,8 @@ const deleteVideo = expressAsyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, {}, "Video Deleted Succssfully..."));
 });
 
-/**
- * @method togglePublishVideoStatus
- */
+//  @method togglePublishVideoStatus
 const togglePublishStatus = expressAsyncHandler(async (req, res) => {
-  // TODO: Make video publish or draft
   const { videoId } = req.params;
 
   if (!videoId) {
