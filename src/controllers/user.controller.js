@@ -275,7 +275,7 @@ const updateUserDetails = expressAsyncHandler(async (req, res) => {
 const updateUserAvatar = expressAsyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
 
-  if (avatarLocalPath) {
+  if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar is required");
   }
 
