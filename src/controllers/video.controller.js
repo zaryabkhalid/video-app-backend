@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { User } from "../models/user.model.js";
 import { Video } from "../models/video.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -16,7 +15,7 @@ const getAllVideos = expressAsyncHandler(async (req, res) => {
   const videosAggregation = await Video.aggregate([
     {
       $match: {
-        owner: req?.user._id,
+        owner: new mongoose.Types.ObjectId(req.user._id),
       },
     },
   ]);
