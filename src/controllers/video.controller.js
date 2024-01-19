@@ -10,8 +10,6 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
  */
 const getAllVideos = expressAsyncHandler(async (req, res) => {
   const { pageNo, sort, limit } = req.query;
-  console.log(req.query);
-
   const videosAggregation = await Video.aggregate([
     {
       $match: {
