@@ -10,7 +10,26 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
  * @method GetAllVideos
  */
 const getAllVideos = expressAsyncHandler(async (req, res) => {
-  // TODO: get all videos from db using queries like pagination, sort and limit=10;
+  const { pageNo, sort, limit } = req.query;
+  console.log(req.query);
+
+  const videosAggregation = await Video.aggregate([
+    {
+      $match: {
+        owner: req?.user._id,
+      },
+    },
+  ]);
+
+  const paginatedVideoData = await Video.aggregatePaginate(videosAggregation, {
+    page: pageNo,
+    limit: limit,
+    sort: {
+      createdAt: sort,
+    },
+  });
+
+  return res.status(200).json(new ApiResponse(200, paginatedVideoData, "Success"));
 });
 
 //@method PulishVideo

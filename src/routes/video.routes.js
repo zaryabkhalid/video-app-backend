@@ -17,6 +17,7 @@ import { upload } from "../middlewares/multer.middleware.js";
 router.use(verifyJwt);
 
 router.route("/").get(getAllVideos);
+
 router.route("/").post(
   upload.fields([
     { name: "videoFile", maxCount: 1 },
