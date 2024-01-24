@@ -3,16 +3,40 @@ import { Comment } from "../models/comment.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { expressAsyncHandler } from "../utils/expressAsyncHandler.js";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 /**
  * @method GetVedioComments
  */
 
 const getVideoComments = expressAsyncHandler(async (req, res) => {
-  // TODO: get all comments for a vedio
+  //TODO: get all comments for a vedio
 
   const { videoId } = req.params;
   const { page = 1, limit = 10 } = req.query;
+
+  const filteredVideoID = isValidObjectId(videoId);
+
+  if (!filteredVideoID) {
+    throw new ApiError(400, "Video Id is'nt Valid");
+  }
+
+  const commentAggregate = await Comment.aggregate([
+    {
+      $match: new mongoose.Types.ObjectId(videoId),
+    },
+  ]);
+
+  if (!commentAggregate) {
+    throw new ApiError(402, "Video not Found");
+  }
+
+  const pagianatedComments = mongooseAggregatePaginate(commentAggregate, {
+    page: page,
+    limit: limit,
+  });
+
+  return res.status(200).json(new ApiResponse(200, pagianatedComments, "Success..."));
 });
 
 /**
