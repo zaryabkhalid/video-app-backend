@@ -16,6 +16,23 @@ const getAllVideos = expressAsyncHandler(async (req, res) => {
         owner: new mongoose.Types.ObjectId(req.user._id),
       },
     },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "user",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              fullName: 1,
+              _id: 1,
+            },
+          },
+        ],
+      },
+    },
   ]);
 
   const paginatedVideoData = await Video.aggregatePaginate(videosAggregation, {
