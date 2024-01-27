@@ -3,7 +3,6 @@ import { Comment } from "../models/comment.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { expressAsyncHandler } from "../utils/expressAsyncHandler.js";
-import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 /**
  * @method GetVedioComments
@@ -13,7 +12,7 @@ const getVideoComments = expressAsyncHandler(async (req, res) => {
   //TODO: get all comments for a vedio
 
   const { videoId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
+  const { page, limit } = req.query;
 
   const filteredVideoID = isValidObjectId(videoId);
 
@@ -23,7 +22,60 @@ const getVideoComments = expressAsyncHandler(async (req, res) => {
 
   const commentAggregate = await Comment.aggregate([
     {
-      $match: new mongoose.Types.ObjectId(videoId),
+      $match: {
+        videos: new mongoose.Types.ObjectId(videoId),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "videos",
+        foreignField: "_id",
+        as: "video_details",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+              description: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "user_details",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              username: 1,
+              fullName: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        video_details: {
+          $arrayElemAt: ["$video_details", 0],
+        },
+        user_details: {
+          $arrayElemAt: ["$user_details", 0],
+        },
+      },
+    },
+    {
+      $skip: (page - 1) * limit,
+    },
+    {
+      $limit: parseInt(limit),
     },
   ]);
 
@@ -31,12 +83,7 @@ const getVideoComments = expressAsyncHandler(async (req, res) => {
     throw new ApiError(402, "Video not Found");
   }
 
-  const pagianatedComments = mongooseAggregatePaginate(commentAggregate, {
-    page: page,
-    limit: limit,
-  });
-
-  return res.status(200).json(new ApiResponse(200, pagianatedComments, "Success..."));
+  return res.status(200).json(new ApiResponse(200, commentAggregate, "Success..."));
 });
 
 /**
@@ -100,12 +147,13 @@ const updateComment = expressAsyncHandler(async (req, res) => {
     {
       new: true,
     }
-  );
+  )
+    .populate({ path: "videos", select: "_id videoFile thumbnail title description view isPublished" })
+    .populate({ path: "owner", select: "-refreshTokens -password" });
 
   if (!filteredComment) {
-    throw new ApiError(402, "something Went Wrong");
+    throw new ApiError(402, "something went wrong while updating comment");
   }
-  console.log("Comment find by using userId", filteredComment);
 
   return res.status(200).json(new ApiResponse(200, filteredComment, "comment update successfully..."));
 });
