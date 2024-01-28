@@ -2,6 +2,11 @@ import mongoose, { Schema } from "mongoose";
 
 const tweetSchema = new Schema(
   {
+    title: {
+      type: String,
+      required: true,
+    },
+
     content: {
       type: String,
       required: true,
