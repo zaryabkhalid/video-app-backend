@@ -11,7 +11,7 @@ const handleNewTweet = async (title, content, userId) => {
   return tweet;
 };
 
-const handleUserTweets = async (userId) => {
+const handleUserTweets = async (userId, page, limit, sortBy, sortType) => {
   page = isNaN(page) ? 1 : Number(page);
   limit = isNaN(limit) ? 10 : Number(limit);
 
