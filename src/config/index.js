@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const {
+  APP_NODE_ENV,
   APP_PORT,
   APP_MONGODB_URI,
   APP_ACCESS_TOKEN_SECRET,

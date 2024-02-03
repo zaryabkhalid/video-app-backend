@@ -12,7 +12,7 @@ const userSchema = new Schema(
   {
     username: {
       type: String,
-      required: true,
+      required: [true, "username is required"],
       unique: true,
       lowercase: true,
       trim: true,
@@ -21,7 +21,7 @@ const userSchema = new Schema(
 
     email: {
       type: String,
-      required: true,
+      required: [true, "Email is required"],
       unique: true,
       lowercase: true,
       trim: true,
@@ -30,14 +30,14 @@ const userSchema = new Schema(
     fullName: {
       type: String,
       lowercase: true,
-      required: true,
+      required: [true, "fullName is required"],
       trim: true,
       index: true,
     },
 
     avatar: {
       type: String, // upload to cloudinary
-      required: true,
+      required: [true, "Avatar is required"],
     },
 
     coverImage: {

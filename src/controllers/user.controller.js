@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+import { httpStatusCode } from "../utils/httpStatus.js";
 import { expressAsyncHandler } from "../utils/expressAsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
@@ -6,7 +8,6 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { generateAccessAndRefreshTokens } from "../utils/generateTokens.js";
 import jwt from "jsonwebtoken";
 import { APP_REFRESH_TOKEN_SECRET } from "../config/index.js";
-import mongoose from "mongoose";
 
 /**
  *
@@ -16,13 +17,13 @@ import mongoose from "mongoose";
 const registerUser = expressAsyncHandler(async (req, res) => {
   const { username, email, fullName, password } = req.body;
   if ([username, email, fullName, password].some((field) => field?.trim() === "")) {
-    throw new ApiError(400, "All fields are required");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "All fields are required");
   }
 
   // User exists
   const existedUser = await User.findOne({ $or: [{ email }, { username }] });
   if (existedUser) {
-    throw new ApiError(409, "User with email or username already exists");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "User with email or username already exists");
   }
 
   // Getting files path from our local public folder
@@ -40,14 +41,14 @@ const registerUser = expressAsyncHandler(async (req, res) => {
   }
 
   if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar is required");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Avatar is required");
   }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
   if (!avatar) {
-    throw new ApiError(400, "Avatar is required");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Avatar is required");
   }
 
   const user = await User.create({
@@ -65,7 +66,9 @@ const registerUser = expressAsyncHandler(async (req, res) => {
     throw new ApiError(500, "Something went wrong while registering a User");
   }
 
-  return res.status(201).json(new ApiResponse(200, createdUser, "User Registered Successfully"));
+  return res
+    .status(httpStatusCode.CREATED)
+    .json(new ApiResponse(httpStatusCode.OK, createdUser, "User Registered Successfully"));
 });
 
 /**
@@ -77,23 +80,23 @@ const loginUser = expressAsyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
   if (!(email || username)) {
-    throw new ApiError("400", "Username or Email is required");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Username or Email is required");
   }
 
   if (!password) {
-    throw new ApiError("400", "Password is required");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Password is required");
   }
 
   const user = await User.findOne({ $or: [{ email }, { username }] });
 
   if (!user) {
-    throw new ApiError(404, "User does not exist");
+    throw new ApiError(httpStatusCode.NOT_FOUND, "User does not exist");
   }
 
   const isPasswordValid = await user.isPasswordCorrect(password);
 
   if (!isPasswordValid) {
-    throw new ApiError(401, "Invalid user cradentials");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Invalid user cradentials");
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
@@ -107,12 +110,12 @@ const loginUser = expressAsyncHandler(async (req, res) => {
   };
 
   return res
-    .status(200)
+    .status(httpStatusCode.OK)
     .cookie("accessToken", accessToken, options)
     .cookie("refreshToken", refreshToken, options)
     .json(
       new ApiResponse(
-        200,
+        httpStatusCode.OK,
         {
           user: loggedInUser,
           accessToken,
@@ -152,7 +155,7 @@ const logoutUser = expressAsyncHandler(async (req, res) => {
     .status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, {}, "User logged Out"));
+    .json(new ApiResponse(httpStatusCode.OK, {}, "User logged Out"));
 });
 
 /**
@@ -167,24 +170,24 @@ const refreshAccessToken = expressAsyncHandler(async (req, res) => {
   const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
   if (!incomingRefreshToken) {
-    throw new ApiError(401, "Unauthorized Request");
+    throw new ApiError(httpStatusCode.UNAUTHORIZED, "Unauthorized Request");
   }
 
   // verify RefreshToken
   try {
     const decodedRefreshToken = await jwt.verify(incomingRefreshToken, APP_REFRESH_TOKEN_SECRET);
     if (!decodedRefreshToken) {
-      throw new ApiError(401, "Unauthorized Access.");
+      throw new ApiError(httpStatusCode.UNAUTHORIZED, "Unauthorized Access.");
     }
 
     const matchedUser = await User.findById(decodedRefreshToken._id);
 
     if (!matchedUser) {
-      throw new ApiError(400, "Invalid User");
+      throw new ApiError(httpStatusCode.BAD_REQUEST, "Invalid User");
     }
 
     if (incomingRefreshToken !== matchedUser?.refreshTokens) {
-      throw new ApiError(401, "Unauthorized User");
+      throw new ApiError(httpStatusCode.UNAUTHORIZED, "Unauthorized User");
     }
 
     // Generate new tokens
@@ -197,12 +200,14 @@ const refreshAccessToken = expressAsyncHandler(async (req, res) => {
     const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(matchedUser._id);
 
     return res
-      .status(200)
+      .status(httpStatusCode.OK)
       .cookie("accessToken", accessToken, options)
       .cookie("refreshToken", refreshToken, options)
-      .json(new ApiResponse(200, { accessToken, refreshToken: refreshToken }, "Tokens Refreshed Successfully"));
+      .json(
+        new ApiResponse(httpStatusCode.OK, { accessToken, refreshToken: refreshToken }, "Tokens Refreshed Successfully")
+      );
   } catch (error) {
-    throw new ApiError(401, error?.message || "Invalid Refresh Token");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, error?.message || "Invalid Refresh Token");
   }
 });
 
@@ -219,14 +224,14 @@ const changeCurrentUserPassword = expressAsyncHandler(async (req, res) => {
   const isUserPasswordCorrect = await user.isPasswordCorrect(oldPassword);
 
   if (!isUserPasswordCorrect) {
-    throw new ApiError(401, "Invalid Old Password");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Invalid Old Password");
   }
 
   user.password = newPassword;
 
   await user.save({ validateBeforeSave: false });
 
-  return res.status(200).json(new ApiResponse(200, {}, "Password Changed Successfully"));
+  return res.status(httpStatusCode.OK).json(new ApiResponse(httpStatusCode.OK, {}, "Password Changed Successfully"));
 });
 
 /**
@@ -236,7 +241,9 @@ const changeCurrentUserPassword = expressAsyncHandler(async (req, res) => {
  * */
 
 const getCurrentUser = expressAsyncHandler(async (req, res) => {
-  return res.status(200).json(new ApiResponse(200, req.user, "Current User Fetched Successfully"));
+  return res
+    .status(httpStatusCode.OK)
+    .json(new ApiResponse(httpStatusCode.OK, req.user, "Current User Fetched Successfully"));
 });
 
 /**
@@ -249,7 +256,7 @@ const updateUserDetails = expressAsyncHandler(async (req, res) => {
   const { fullName, email } = req.body;
 
   if (!fullName || !email) {
-    throw new ApiError(400, "FullName and Email are required");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "FullName and Email are required");
   }
 
   const user = await User.findByIdAndUpdate(
@@ -263,7 +270,9 @@ const updateUserDetails = expressAsyncHandler(async (req, res) => {
     { new: true }
   ).select("-password -refreshTokens");
 
-  return res.status(200).json(new ApiResponse(200, user, "User Details Updated Successfully"));
+  return res
+    .status(httpStatusCode.OK)
+    .json(new ApiResponse(httpStatusCode.OK, user, "User Details Updated Successfully"));
 });
 
 /**
@@ -276,12 +285,12 @@ const updateUserAvatar = expressAsyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
 
   if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar is required");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Avatar is required");
   }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
   if (!avatar.url) {
-    throw new ApiError(400, "Error While uploading Avatar");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Error While uploading Avatar");
   }
 
   const user = await User.findByIdAndUpdate(
@@ -294,7 +303,9 @@ const updateUserAvatar = expressAsyncHandler(async (req, res) => {
     { new: true }
   ).select("-password -refreshTokens");
 
-  return res.status(200).json(new ApiResponse(200, user, "User Avatar Updated Successfully"));
+  return res
+    .status(httpStatusCode.OK)
+    .json(new ApiResponse(httpStatusCode.OK, user, "User Avatar Updated Successfully"));
 });
 
 /**
@@ -306,13 +317,13 @@ const updateUserAvatar = expressAsyncHandler(async (req, res) => {
 const updateUserCoverImage = expressAsyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path;
   if (!coverImageLocalPath) {
-    throw new ApiError(400, "Cover Image is required");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Cover Image is required");
   }
 
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
   if (!coverImage.url) {
-    throw new ApiError(400, "Error While uploading Cover Image");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Error While uploading Cover Image");
   }
 
   const user = await User.findByIdAndUpdate(
@@ -326,7 +337,9 @@ const updateUserCoverImage = expressAsyncHandler(async (req, res) => {
       new: true,
     }
   ).select("-password -refreshTokens");
-  return res.status(200).json(new ApiResponse(200, user, "User Cover Image Updated Successfully"));
+  return res
+    .status(httpStatusCode.OK)
+    .json(new ApiResponse(httpStatusCode.OK, user, "User Cover Image Updated Successfully"));
 });
 
 /**
@@ -338,7 +351,7 @@ const updateUserCoverImage = expressAsyncHandler(async (req, res) => {
 const getUserChannelProfile = expressAsyncHandler(async (req, res) => {
   const { username } = req.params;
   if (!username?.trim()) {
-    throw new ApiError(400, "Username is missing");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Username is missing");
   }
 
   const channel = await User.aggregate([
@@ -395,10 +408,12 @@ const getUserChannelProfile = expressAsyncHandler(async (req, res) => {
   ]);
 
   if (!channel?.length) {
-    throw new ApiError(404, "Channel Not Found");
+    throw new ApiError(httpStatusCode.NOT_FOUND, "Channel Not Found");
   }
 
-  return res.status(200).json(new ApiResponse(200, channel[0], "Channel Profile Fetched Successfully"));
+  return res
+    .status(httpStatusCode.OK)
+    .json(new ApiResponse(httpStatusCode.OK, channel[0], "Channel Profile Fetched Successfully"));
 });
 
 const getWatchHistory = expressAsyncHandler(async (req, res) => {
@@ -445,7 +460,9 @@ const getWatchHistory = expressAsyncHandler(async (req, res) => {
     },
   ]);
 
-  return res.status(200).json(new ApiResponse(200, user[0].watchHistory, "Watch History Fetched Successfully"));
+  return res
+    .status(httpStatusCode.OK)
+    .json(new ApiResponse(httpStatusCode.OK, user[0].watchHistory, "Watch History Fetched Successfully"));
 });
 
 export {

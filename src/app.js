@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
 
@@ -20,6 +21,8 @@ import likeRouter from "./routes/like.routes.js";
 import playlistRouter from "./routes/playlist.routes.js";
 import subscriptionRouter from "./routes/subscription.routes.js";
 import tweetRouter from "./routes/tweet.routes.js";
+import { ApiError } from "./utils/ApiError.js";
+import { httpStatusCode } from "./utils/httpStatus.js";
 
 // routes declaration
 app.use("/api/v1/users", userRouter);
@@ -31,5 +34,11 @@ app.use("/api/v1/likes", likeRouter);
 app.use("/api/v1/playlist", playlistRouter);
 app.use("/api/v1/subscriptions", subscriptionRouter);
 app.use("/api/v1/tweets", tweetRouter);
+
+app.all("*", (req, res, next) => {
+  next(new ApiError(httpStatusCode.NOT_FOUND, `Invalid Url ${req.originalUrl}`));
+});
+
+app.use(errorHandler);
 
 export { app };
