@@ -3,24 +3,25 @@ import { Comment } from "../models/comment.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { expressAsyncHandler } from "../utils/expressAsyncHandler.js";
+import { httpStatusCode } from "../utils/httpStatus.js";
 
 /**
  * @method GetVedioComments
  */
 
-const getVideoComments = expressAsyncHandler(async (req, res) => {
+const getVideoComments = expressAsyncHandler(async (req, res, next) => {
   //TODO: get all comments for a vedio
 
   const { videoId } = req.params;
   const { page, limit } = req.query;
 
-  const filteredVideoID = isValidObjectId(videoId);
+  const isVideoIValid = isValidObjectId(videoId);
 
-  if (!filteredVideoID) {
-    throw new ApiError(400, "Video Id is'nt Valid");
+  if (!isVideoIValid) {
+    next(new ApiError(httpStatusCode.BAD_REQUEST, "Video Id is'nt Valid"));
   }
 
-  const commentAggregate = await Comment.aggregate([
+  const commentsOnVideo = await Comment.aggregate([
     {
       $match: {
         videos: new mongoose.Types.ObjectId(videoId),
@@ -79,18 +80,18 @@ const getVideoComments = expressAsyncHandler(async (req, res) => {
     },
   ]);
 
-  if (!commentAggregate) {
-    throw new ApiError(402, "Video not Found");
+  if (!commentsOnVideo) {
+    return next(new ApiError(httpStatusCode.NOT_FOUND, "Video not Found"));
   }
 
-  return res.status(200).json(new ApiResponse(200, commentAggregate, "Success..."));
+  return res.status(httpStatusCode.OK).json(new ApiResponse(httpStatusCode.OK, commentsOnVideo, "Success..."));
 });
 
 /**
  * @method AddComment
  */
 
-const addComment = expressAsyncHandler(async (req, res) => {
+const addComment = expressAsyncHandler(async (req, res, next) => {
   // TODO: Add a comment to a video
   const { videoId } = req.params;
   const { content } = req.body;
@@ -99,11 +100,11 @@ const addComment = expressAsyncHandler(async (req, res) => {
   const isValidId = isValidObjectId(new mongoose.Types.ObjectId(videoId));
 
   if (!isValidId) {
-    throw new ApiError(400, "video Id isn't valid...");
+    return next(new ApiError(httpStatusCode.BAD_REQUEST, "video Id isn't valid..."));
   }
 
   if (!content) {
-    throw new ApiError(400, "content is required");
+    return next(new ApiError(httpStatusCode.BAD_REQUEST, "content is required"));
   }
 
   const newContent = await Comment.create({
@@ -113,28 +114,35 @@ const addComment = expressAsyncHandler(async (req, res) => {
   });
 
   if (!newContent) {
-    throw new ApiError(500, "Something went wrong while commenting please try again later...");
+    return next(
+      new ApiError(
+        httpStatusCode.INTERNAL_SERVER_ERROR,
+        "Something went wrong while commenting please try again later..."
+      )
+    );
   }
 
-  return res.status(201).json(new ApiResponse(201, newContent, "Successfully commented on Video"));
+  return res
+    .status(httpStatusCode.CREATED)
+    .json(new ApiResponse(httpStatusCode.CREATED, newContent, "Successfully commented on Video"));
 });
 
 /**
  * @method UpdateComment
  */
 
-const updateComment = expressAsyncHandler(async (req, res) => {
+const updateComment = expressAsyncHandler(async (req, res, next) => {
   // TODO: Update a Comment on a video
 
   const { commentId } = req.params;
   const { content } = req.body;
 
   if (!commentId) {
-    throw new ApiError(400, "Comment Id is not valid...");
+    return next(ApiError(httpStatusCode.BAD_REQUEST, "Comment Id is not valid..."));
   }
 
   if (!content) {
-    throw new ApiError(400, "Content is required...");
+    return next(ApiError(httpStatusCode.BAD_REQUEST, "Content is required..."));
   }
 
   const filteredComment = await Comment.findByIdAndUpdate(
@@ -152,34 +160,38 @@ const updateComment = expressAsyncHandler(async (req, res) => {
     .populate({ path: "owner", select: "-refreshTokens -password" });
 
   if (!filteredComment) {
-    throw new ApiError(402, "something went wrong while updating comment");
+    return next(new ApiError(httpStatusCode.INTERNAL_SERVER_ERROR, "something went wrong while updating comment"));
   }
 
-  return res.status(200).json(new ApiResponse(200, filteredComment, "comment update successfully..."));
+  return res
+    .status(httpStatusCode.OK)
+    .json(new ApiResponse(httpStatusCode.OK, filteredComment, "comment update successfully..."));
 });
 
 /**
  * @method DeleteComment
  */
 
-const deleteComment = expressAsyncHandler(async (req, res) => {
+const deleteComment = expressAsyncHandler(async (req, res, next) => {
   // TODO: Delete a comment from a vedio
 
   const { commentId } = req.params;
 
   if (!commentId) {
-    throw new ApiError(400, "comment id is required");
+    return next(new ApiError(httpStatusCode.BAD_REQUEST, "comment id is required"));
   }
 
   const commentToBeDeleted = await Comment.findByIdAndDelete(commentId);
 
   if (!commentToBeDeleted) {
-    throw new ApiError(400, "Something went wrong while deleting comment.");
+    return next(new ApiError(httpStatusCode.INTERNAL_SERVER_ERROR, "Something went wrong while deleting comment."));
   }
 
   const deleteCommentId = commentToBeDeleted._id;
 
-  return res.status(200).json(new ApiResponse(200, { deleteCommentId }, "comment deletd successfully..."));
+  return res
+    .status(httpStatusCode.OK)
+    .json(new ApiResponse(httpStatusCode.OK, { deleteCommentId }, "comment deletd successfully..."));
 });
 
 export { getVideoComments, addComment, updateComment, deleteComment };
