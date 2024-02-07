@@ -80,7 +80,7 @@ const handleUpdateTweet = async (tweetId, title, content) => {
 };
 
 const handleTweetDelete = async (tweetId) => {
-  const deleteTweet = await Tweet.findByIdAndDelete(new mongoose.Types.ObjectId(tweetId)).select("_id");
+  const deleteTweet = await Tweet.findByIdAndDelete(new mongoose.Types.ObjectId(tweetId));
 
   return deleteTweet;
 };
