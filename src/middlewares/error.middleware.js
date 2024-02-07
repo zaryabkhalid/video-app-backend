@@ -1,57 +1,26 @@
 import { ApiError } from "../utils/ApiError.js";
-import { httpStatusCode } from "../utils/httpStatus.js";
 import { APP_NODE_ENV } from "../config/index.js";
+import mongoose from "mongoose";
 
-const castErrorHandler = (error) => {
-  const msg = `Invalid Value ${error.value}: field ${error.path}`;
-  return new ApiError(httpStatusCode.BAD_REQUEST, msg);
-};
+const errorHandler = (err, req, res, next) => {
+  let error = err;
 
-const duplicateKeyErrorHandler = (err) => {
-  const msg = `There is already a movie with name ${err.keyValue.name}. Please use another name.`;
-  return new ApiError(httpStatusCode.BAD_REQUEST, msg);
-};
+  // checking if error is not an instance of our ApiError Class then either its a mongoose error(400) or a server error(500).
+  if (!(error instanceof ApiError)) {
+    const statusCode = error.statusCode || error instanceof mongoose.Error ? 400 : 500;
 
-const devError = (res, error) => {
-  return res.status(error.statusCode).json({
-    status: error.status,
-    statusCode: error.statusCode,
+    const message = error.message || "Something Went wrong";
+
+    error = new ApiError(statusCode, message, error?.errors || [], err.stack);
+  }
+
+  const response = {
+    ...error,
     message: error.message,
-    isOperational: error.isOperational,
-    stack: error.stack,
-    error: error,
-  });
-};
+    ...(APP_NODE_ENV === "development" ? { stack: error.stack } : {}),
+  };
 
-const prodError = (res, error) => {
-  if (error.isOperational) {
-    return res.status(error.statusCode).json({
-      statusCode: error.statusCode,
-      message: error.message,
-    });
-  } else {
-    return res.status(httpStatusCode.INTERNAL_SERVER_ERROR).json({
-      status: "Error",
-      message: "Something Went Wrong Please try again later..",
-    });
-  }
-};
-
-const errorHandler = (error, req, res, next) => {
-  error.statusCode = error.statusCode || 500;
-  error.message = error.message || "Something Went Wrong";
-  error.status = error.status;
-  error.isOperational = error.isOperational;
-  error.stack = error.stack;
-
-  if (APP_NODE_ENV === "development") {
-    devError(res, error);
-  } else if (APP_NODE_ENV === "production") {
-    if (error.name === "CastError") error = castErrorHandler(error);
-    if (error.code === 11000) error = duplicateKeyErrorHandler(error);
-  }
-
-  prodError(res, error);
+  return res.status(error.statusCode).json(response);
 };
 
 export { errorHandler };

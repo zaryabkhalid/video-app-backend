@@ -1,14 +1,11 @@
 class ApiError extends Error {
-  constructor(statusCode, message = "Something went wrong", stack = "") {
+  constructor(statusCode, message = "Something went wrong", errors = [], stack = "") {
     super(message);
-
-    Object.setPrototypeOf(this, new.target.prototype);
-
     this.statusCode = statusCode;
     this.data = null;
     this.message = message;
-    this.status = statusCode >= 400 && statusCode < 500 ? "Fail" : "Error";
-    this.isOperational = true;
+    this.status = false;
+    this.errors = errors;
 
     if (stack) {
       this.stack = stack;
