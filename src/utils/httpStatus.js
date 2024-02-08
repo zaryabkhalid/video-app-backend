@@ -1,4 +1,4 @@
-const httpStatusCode = {
+const httpStatusCode = Object.freeze({
   OK: 200,
   CREATED: 201,
   BAD_REQUEST: 400,
@@ -10,8 +10,6 @@ const httpStatusCode = {
   TO_MANY_REQUEST: 429,
   INTERNAL_SERVER_ERROR: 500,
   SERVICE_UNAVAILABLE: 503,
-};
-
-Object.freeze(httpStatusCode);
+});
 
 export { httpStatusCode };
