@@ -1,4 +1,7 @@
 import { Router } from "express";
+import { validate } from "../validators/validate.js";
+import { mongoIdParamVariableValidator } from "../validators/mongoIdPathVariableValidator.js";
+import { publishVideoValidator, updateVideoValidator } from "../validators/videoValidator.js";
 
 const router = Router();
 
@@ -23,15 +26,25 @@ router.route("/").post(
     { name: "videoFile", maxCount: 1 },
     { name: "thumbnail", maxCount: 1 },
   ]),
+  publishVideoValidator(),
+  validate,
   publishAVideo
 );
 
-router.route("/:videoId").get(getVideoById);
+router.route("/:videoId").get(mongoIdParamVariableValidator("videoId"), validate, getVideoById);
 
-router.route("/:videoId").delete(deleteVideo);
+router.route("/:videoId").delete(mongoIdParamVariableValidator("videoId"), validate, deleteVideo);
 
-router.route("/:videoId").patch(upload.single("thumbnail"), updateVideo);
+router
+  .route("/:videoId")
+  .patch(
+    upload.single("thumbnail"),
+    mongoIdParamVariableValidator("videoId"),
+    updateVideoValidator(),
+    validate,
+    updateVideo
+  );
 
-router.route("/toggle/publish/:videoId").patch(togglePublishStatus);
+router.route("/toggle/publish/:videoId").patch(mongoIdParamVariableValidator("videoId"), validate, togglePublishStatus);
 
 export default router;

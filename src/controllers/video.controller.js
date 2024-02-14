@@ -4,6 +4,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { expressAsyncHandler } from "../utils/expressAsyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { httpStatusCode } from "../utils/httpStatus.js";
 
 /**
  * @method GetAllVideos
@@ -43,7 +44,7 @@ const getAllVideos = expressAsyncHandler(async (req, res) => {
     },
   });
 
-  return res.status(200).json(new ApiResponse(200, paginatedVideoData, "Success"));
+  return res.status(httpStatusCode.OK).json(new ApiResponse(httpStatusCode.OK, paginatedVideoData, "Success"));
 });
 
 //@method PulishVideo
@@ -51,10 +52,6 @@ const publishAVideo = expressAsyncHandler(async (req, res) => {
   // TODO: Get upload video on a cloudinary and save its link on db.
 
   const { title, description } = req.body;
-
-  if ([title, description].some((field) => field?.trim() === "")) {
-    throw new ApiError("Title or Description is required");
-  }
 
   let videoFileLocalPath;
   let thumbnailLocalPath;
@@ -65,7 +62,7 @@ const publishAVideo = expressAsyncHandler(async (req, res) => {
   }
 
   if (!videoFileLocalPath) {
-    throw new ApiError("Video File is required");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Video File is required");
   }
 
   // Verifying Thumbnail Path
@@ -75,7 +72,7 @@ const publishAVideo = expressAsyncHandler(async (req, res) => {
   }
 
   if (!thumbnailLocalPath) {
-    throw new ApiError("Thumbnail is required");
+    throw new ApiError(httpStatusCode.BAD_REQUEST, "Thumbnail is required");
   }
 
   const videoFile = await uploadOnCloudinary(videoFileLocalPath);
@@ -92,10 +89,12 @@ const publishAVideo = expressAsyncHandler(async (req, res) => {
   });
 
   if (!savedVideo) {
-    throw new ApiError(500, "Something went wrong");
+    throw new ApiError(httpStatusCode.INTERNAL_SERVER_ERROR, "Something went wrong");
   }
 
-  return res.status(201).json(new ApiResponse(200, savedVideo, "Video Uploaded Successfully..."));
+  return res
+    .status(httpStatusCode.CREATED)
+    .json(new ApiResponse(httpStatusCode.CREATED, savedVideo, "Video Uploaded Successfully..."));
 });
 
 //@method GetVideoById
@@ -103,19 +102,15 @@ const getVideoById = expressAsyncHandler(async (req, res) => {
   // TODO: get video by using video ID
   const videoId = req.params.videoId;
 
-  if (!videoId) {
-    throw new ApiError(400, "Video Id is missing");
-  }
-
   const filteredVideo = await Video.findById(videoId).populate({
     path: "owner",
     select: "_id fullName avatar coverImage watchHistory",
   });
   if (!filteredVideo) {
-    throw new ApiError(404, "Video Not Found");
+    throw new ApiError(httpStatusCode.NOT_FOUND, "Video Not Found");
   }
 
-  return res.status(200).json(new ApiResponse(200, filteredVideo, "Success..."));
+  return res.status(httpStatusCode.OK).json(new ApiResponse(httpStatusCode.OK, filteredVideo, "Success..."));
 });
 
 // @method UpdateVideo
@@ -128,13 +123,9 @@ const updateVideo = expressAsyncHandler(async (req, res) => {
     throw new ApiError(400, "Thumbnail is Required");
   }
 
-  if (!title || !description) {
-    throw new ApiError(400, "Title & Description is required.");
-  }
-
   const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
   if (!thumbnail?.url) {
-    throw new ApiError(400, "Error While uploading a thumnail...");
+    throw new ApiError(httpStatusCode.INTERNAL_SERVER_ERROR, "Error While uploading a thumnail...");
   }
 
   const filteredVideo = await Video.findByIdAndUpdate(
@@ -150,10 +141,12 @@ const updateVideo = expressAsyncHandler(async (req, res) => {
   ).select("title description thumbnail");
 
   if (!filteredVideo) {
-    throw new ApiError(404, "Video Not found...");
+    throw new ApiError(httpStatusCode.NOT_FOUND, "Video Not found...");
   }
 
-  return res.status(200).json(new ApiResponse(200, filteredVideo, "Video updated Successfully..."));
+  return res
+    .status(httpStatusCode.OK)
+    .json(new ApiResponse(httpStatusCode.OK, filteredVideo, "Video updated Successfully..."));
 });
 
 //  @method deleteVideo
@@ -162,38 +155,32 @@ const deleteVideo = expressAsyncHandler(async (req, res) => {
 
   const videoId = req.params.videoId;
 
-  if (!videoId) {
-    throw new ApiError(400, "Video Id is missing");
-  }
-
   const videoToBeDeleted = await Video.findByIdAndDelete(videoId);
 
   if (!videoToBeDeleted) {
-    throw new ApiError(404, "Video does'nt exist");
+    throw new ApiError(httpStatusCode.NOT_FOUND, "Video does'nt exist");
   }
 
-  return res.status(200).json(new ApiResponse(200, {}, "Video Deleted Succssfully..."));
+  return res.status(httpStatusCode.OK).json(new ApiResponse(httpStatusCode.OK, {}, "Video Deleted Succssfully..."));
 });
 
 //  @method togglePublishVideoStatus
 const togglePublishStatus = expressAsyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
-  if (!videoId) {
-    throw new ApiError(400, "Video Id is missing...");
-  }
-
   const updatedStatusVideo = await Video.findById(videoId);
 
   if (!updatedStatusVideo) {
-    throw new ApiError(404, "Video not found...");
+    throw new ApiError(httpStatusCode.NOT_FOUND, "Video not found...");
   }
 
   updatedStatusVideo.isPublished = !updatedStatusVideo.isPublished;
 
   updatedStatusVideo.save({ validateBeforeSave: false });
 
-  return res.status(200).json(new ApiResponse(200, updatedStatusVideo, "Status updated Successfully..."));
+  return res
+    .status(httpStatusCode.OK)
+    .json(new ApiResponse(httpStatusCode.OK, updatedStatusVideo, "Status updated Successfully..."));
 });
 
 export { getAllVideos, getVideoById, publishAVideo, updateVideo, deleteVideo, togglePublishStatus };
