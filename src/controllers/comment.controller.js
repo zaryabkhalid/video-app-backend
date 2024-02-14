@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from "mongoose";
+import mongoose from "mongoose";
 import { Comment } from "../models/comment.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -14,12 +14,6 @@ const getVideoComments = expressAsyncHandler(async (req, res, next) => {
 
   const { videoId } = req.params;
   const { page, limit } = req.query;
-
-  const isVideoIValid = isValidObjectId(videoId);
-
-  if (!isVideoIValid) {
-    next(new ApiError(httpStatusCode.BAD_REQUEST, "Video Id is'nt Valid"));
-  }
 
   const commentsOnVideo = await Comment.aggregate([
     {
@@ -96,16 +90,6 @@ const addComment = expressAsyncHandler(async (req, res, next) => {
   const { videoId } = req.params;
   const { content } = req.body;
   const userId = req.user._id;
-
-  const isValidId = isValidObjectId(new mongoose.Types.ObjectId(videoId));
-
-  if (!isValidId) {
-    return next(new ApiError(httpStatusCode.BAD_REQUEST, "video Id isn't valid..."));
-  }
-
-  if (!content) {
-    return next(new ApiError(httpStatusCode.BAD_REQUEST, "content is required"));
-  }
 
   const newContent = await Comment.create({
     content: content,
