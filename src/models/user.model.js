@@ -52,7 +52,7 @@ const userSchema = new Schema(
     },
 
     refreshTokens: {
-      type: String,
+      type: [String],
     },
   },
   { timestamps: true }
@@ -77,7 +77,7 @@ userSchema.methods.generateAccessToken = async function () {
       fullname: this.fullName,
     },
     APP_ACCESS_TOKEN_SECRET,
-    { expiresIn: APP_ACCESS_TOKEN_EXP }
+    { expiresIn: parseInt(APP_ACCESS_TOKEN_EXP) }
   );
 };
 

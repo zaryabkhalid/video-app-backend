@@ -31,9 +31,11 @@ const registerUser = expressAsyncHandler(async (req, res) => {
   let coverImageLocalPath;
 
   // checking for avatar image
-  if (req.files && Array.isArray(req.files.avatar) && req.files.avatar.length > 0) {
+  if (req?.files && Array.isArray(req?.files?.avatar) && req?.files?.avatar.length > 0) {
     avatarLocalPath = req.files.avatar[0].path;
   }
+
+  console.log("Before upload on cloudinary:", avatarLocalPath);
 
   // checking for coverImage
   if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
@@ -45,6 +47,9 @@ const registerUser = expressAsyncHandler(async (req, res) => {
   }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  console.log("After uploaded on Cloudinary:", avatar);
+
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
   if (!avatar) {
@@ -76,7 +81,9 @@ const registerUser = expressAsyncHandler(async (req, res) => {
  * @method: ----> Login User ---->
  *
  * */
-const loginUser = expressAsyncHandler(async (req, res) => {
+const loginUser = expressAsyncHandler(async (req, res, next) => {
+  const cookies = req.cookies;
+
   const { username, email, password } = req.body;
 
   if (!(email || username)) {
@@ -101,27 +108,32 @@ const loginUser = expressAsyncHandler(async (req, res) => {
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
 
-  const loggedInUser = await User.findById(user._id).select("-password -refreshTokens");
+  const newRefreshTokenList = !cookies.tokenID
+    ? user.refreshTokens
+    : user.refreshTokens.filter((rt) => rt !== cookies.tokenID);
+
+  user.refreshTokens = [...newRefreshTokenList, refreshToken];
+
+  await user.save({ validateBeforeSave: false });
 
   // cookies Options
   const options = {
     httpOnly: true,
     secure: true,
+    sameSite: "none",
+    maxAge: 1 * 24 * 60 * 60 * 1000,
   };
 
   return res
     .status(httpStatusCode.OK)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
+    .cookie("tokenID", refreshToken, options)
     .json(
       new ApiResponse(
         httpStatusCode.OK,
         {
-          user: loggedInUser,
           accessToken,
-          refreshToken,
         },
-        "user loggedIn Successfully"
+        "User LogIn Successfull"
       )
     );
 });
@@ -132,30 +144,31 @@ const loginUser = expressAsyncHandler(async (req, res) => {
  *
  * */
 
-const logoutUser = expressAsyncHandler(async (req, res) => {
-  const user_id = req.user._id;
+const logoutUser = expressAsyncHandler(async (req, res, next) => {
+  const cookies = req.cookies;
 
-  await User.findByIdAndUpdate(
-    user_id,
-    {
-      $unset: { refreshTokens: 1 },
-    },
-    {
-      new: true,
-    }
-  );
+  if (!cookies.tokenID || cookies.tokenID === null) {
+    return next(new ApiError(httpStatusCode.NO_CONTENT, "No-Content"));
+  }
 
-  // cookies Options
-  const options = {
-    httpOnly: true,
-    secure: true,
-  };
+  const refreshTokenID = cookies.tokenID;
+
+  const user = await User.findOne({ refreshTokens: refreshTokenID });
+
+  if (!user) {
+    return res
+      .status(httpStatusCode.NO_CONTENT)
+      .clearCookie("tokenID", { secure: true, httpOnly: true, sameSite: "none" })
+      .json(new ApiResponse(httpStatusCode.NO_CONTENT, {}, "No-Content"));
+  }
+
+  user.refreshTokens = user.refreshTokens.filter((rt) => rt !== refreshTokenID);
+  await user.save({ validateBeforeSave: false });
 
   return res
-    .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
-    .json(new ApiResponse(httpStatusCode.OK, {}, "User logged Out"));
+    .status(httpStatusCode.OK)
+    .clearCookie("tokenID", { httpOnly: true, secure: true, sameSite: "none" })
+    .json(new ApiResponse(httpStatusCode.NO_CONTENT, {}, "Logout Successfull..."));
 });
 
 /**
@@ -164,48 +177,67 @@ const logoutUser = expressAsyncHandler(async (req, res) => {
  *
  * */
 
-const refreshAccessToken = expressAsyncHandler(async (req, res) => {
+const refreshAccessToken = expressAsyncHandler(async (req, res, next) => {
   // Get refresh token from cookies
 
-  const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+  const incomingRefreshToken = req.cookies.tokenID || req.body.tokenID;
 
-  if (!incomingRefreshToken) {
-    throw new ApiError(httpStatusCode.UNAUTHORIZED, "Unauthorized Request");
+  if (!incomingRefreshToken || incomingRefreshToken === undefined) {
+    return next(new ApiError(httpStatusCode.UNAUTHORIZED, "Unauthorized Request"));
+  }
+
+  if (incomingRefreshToken) {
+    res.clearCookie("tokenID", { httpOnly: true, sameSite: "none", secure: true });
   }
 
   // verify RefreshToken
   try {
-    const decodedRefreshToken = await jwt.verify(incomingRefreshToken, APP_REFRESH_TOKEN_SECRET);
-    if (!decodedRefreshToken) {
-      throw new ApiError(httpStatusCode.UNAUTHORIZED, "Unauthorized Access.");
-    }
-
-    const matchedUser = await User.findById(decodedRefreshToken._id);
+    const matchedUser = await User.findOne({ refreshTokens: incomingRefreshToken });
 
     if (!matchedUser) {
-      throw new ApiError(httpStatusCode.BAD_REQUEST, "Invalid User");
+      jwt.verify(incomingRefreshToken, APP_REFRESH_TOKEN_SECRET, async (err, decode) => {
+        if (err) {
+          return next(new ApiError(httpStatusCode.UNAUTHORIZED, "Unauthorized Access."));
+        }
+
+        const hackedUser = await User.findOne({ _id: decode._id });
+        hackedUser.refreshTokens = [];
+        await hackedUser.save({ validateBeforeSave: false });
+      });
+      return next(new ApiError(httpStatusCode.FORBIDDEN, "Forbidden"));
     }
 
-    if (incomingRefreshToken !== matchedUser?.refreshTokens) {
-      throw new ApiError(httpStatusCode.UNAUTHORIZED, "Unauthorized User");
-    }
+    const filteredRefreshTokenList = matchedUser.refreshTokens.filter((rt) => rt !== incomingRefreshToken);
+
+    jwt.verify(incomingRefreshToken, APP_REFRESH_TOKEN_SECRET, async (err, decode) => {
+      if (err) {
+        matchedUser.refreshTokens = [...filteredRefreshTokenList];
+        const result = await matchedUser.save({ validateBeforeSave: false });
+      }
+
+      if (err || matchedUser._id !== decode._id) {
+        return next(new ApiError(httpStatusCode.FORBIDDEN, "Forbidden"));
+      }
+
+      const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(matchedUser._id);
+
+      matchedUser.refreshTokens = [...filteredRefreshTokenList, refreshToken];
+
+      const result = await matchedUser.save({ validateBeforeSave: false });
+
+      const options = {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+      };
+
+      return res
+        .status(httpStatusCode.OK)
+        .cookie("tokenID", refreshToken, options)
+        .json(new ApiResponse(httpStatusCode.OK, { accessToken }, "Tokens Refreshed Successfully"));
+    });
 
     // Generate new tokens
-
-    const options = {
-      httpOnly: true,
-      secure: true,
-    };
-
-    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(matchedUser._id);
-
-    return res
-      .status(httpStatusCode.OK)
-      .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", refreshToken, options)
-      .json(
-        new ApiResponse(httpStatusCode.OK, { accessToken, refreshToken: refreshToken }, "Tokens Refreshed Successfully")
-      );
   } catch (error) {
     throw new ApiError(httpStatusCode.BAD_REQUEST, error?.message || "Invalid Refresh Token");
   }
