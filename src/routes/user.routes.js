@@ -1,3 +1,12 @@
+import { validate } from "../validators/validate.js";
+import { mongoIdParamVariableValidator } from "../validators/mongoIdPathVariableValidator.js";
+import {
+  userLoginValidator,
+  userRegisterationValidator,
+  updateUserDetailValidator,
+  changeCurrentUserPasswordValidator,
+} from "../validators/userValidator.js";
+
 import { Router } from "express";
 import {
   changeCurrentUserPassword,
@@ -23,6 +32,8 @@ const router = Router();
  */
 
 router.route("/register").post(
+  userRegisterationValidator(),
+  validate,
   upload.fields([
     { name: "avatar", maxCount: 1 },
     { name: "coverImage", maxCount: 1 },
@@ -35,7 +46,7 @@ router.route("/register").post(
  * @route /login
  */
 
-router.route("/login").post(loginUser);
+router.route("/login").post(userLoginValidator(), validate, loginUser);
 
 // !Secure Routes
 /**
@@ -56,7 +67,9 @@ router.route("/refresh-token").post(refreshAccessToken);
  * @route /change-password
  */
 
-router.route("/change-password").post(verifyJwt, changeCurrentUserPassword);
+router
+  .route("/change-password")
+  .post(changeCurrentUserPasswordValidator(), validate, verifyJwt, changeCurrentUserPassword);
 
 /**
  * @method GET
@@ -70,7 +83,7 @@ router.route("/current-user").get(verifyJwt, getCurrentUser);
  * @route /update-user-details
  */
 
-router.route("/update-user-details").patch(verifyJwt, updateUserDetails);
+router.route("/update-user-details").patch(updateUserDetailValidator(), validate, verifyJwt, updateUserDetails);
 
 /**
  * @method PATCH

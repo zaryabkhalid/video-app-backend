@@ -285,11 +285,7 @@ const getCurrentUser = expressAsyncHandler(async (req, res) => {
  * */
 
 const updateUserDetails = expressAsyncHandler(async (req, res) => {
-  const { fullName, email } = req.body;
-
-  if (!fullName || !email) {
-    throw new ApiError(httpStatusCode.BAD_REQUEST, "FullName and Email are required");
-  }
+  const { fullName, email, username } = req.body;
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
@@ -297,6 +293,7 @@ const updateUserDetails = expressAsyncHandler(async (req, res) => {
       $set: {
         fullName,
         email,
+        username,
       },
     },
     { new: true }
