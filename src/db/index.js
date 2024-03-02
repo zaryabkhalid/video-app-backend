@@ -1,4 +1,5 @@
 import { APP_NODE_ENV } from "../config/index.js";
+import { logEvents } from "../middlewares/logger.js";
 import mongoose from "mongoose";
 import { DB_NAME } from "../contants.js";
 import { APP_MONGODB_URI } from "../config/index.js";
@@ -10,6 +11,7 @@ const connectDB = async () => {
       console.log(`\nDATABASE HOST: ${conn.connection.host}`);
     }
   } catch (err) {
+    logEvents("mongoError.log", `${err.code} \t ${err.syscall} \t ${err.hostname}`);
     console.log(`MongoDB connection error: ${err.message} error`, err);
     process.exit(1);
   }

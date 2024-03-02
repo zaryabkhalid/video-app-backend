@@ -1,11 +1,14 @@
 import { createServer } from "http";
 import Swagger from "./swagger.js";
 import express from "express";
+import { logger } from "./middlewares/logger.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import compression from "express-compression";
 import requestIp from "request-ip";
 import { limiter } from "./middlewares/rateLimiter.middleware.js";
+// importing error Middleware
+import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -13,16 +16,15 @@ const httpServer = createServer(app);
 Swagger(app);
 
 app.use(cors());
-app.use(compression());
-app.use(requestIp.mw());
+
 app.use(limiter);
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+app.use(compression());
+app.use(requestIp.mw());
 app.use(express.static("public"));
 app.use(cookieParser());
-
-// importing error Middleware
-import { errorHandler } from "./middlewares/error.middleware.js";
+app.use(logger);
 
 // import routes
 import userRouter from "./routes/user.routes.js";
